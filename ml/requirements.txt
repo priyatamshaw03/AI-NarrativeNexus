@@ -1,0 +1,13 @@
+gensim
+ipykernel
+joblib
+matplotlib
+nltk
+numpy
+pandas
+pillow
+scikit-learn
+scipy
+seaborn
+textblob
+Cython
