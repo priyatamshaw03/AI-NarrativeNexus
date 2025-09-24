@@ -58,7 +58,7 @@ const Analysis = () => {
       formData.append("file", file);
 
       setStatus("Extracting text from file...");
-      const response = await fetch("http://127.0.0.1:8000/analyze-file", {
+      const response = await fetch("http://127.0.0.1:8000/api/analyze-file", {
         method: "POST",
         body: formData,
       });
@@ -218,11 +218,9 @@ const Analysis = () => {
             <ul className="mt-6 space-y-4 text-sm">
               <li>
                 <span className="font-medium">Topics:</span>{" "}
-                {analysis.topics
-                  ?.map(
-                    (t) => `${t.keywords.join(", ")} (${t.score.toFixed(2)})`
-                  )
-                  .join(" | ")}
+                {analysis.topics?.map((t) =>
+                  (t.keywords ? t.keywords.join(", ") + " " : "") + `(${t.score.toFixed(2)})`
+                ).join(" | ")}
               </li>
 
               <li>
@@ -236,7 +234,7 @@ const Analysis = () => {
               </li>
               <li>
                 <span className="font-medium">Abstractive Summary:</span>{" "}
-                {analysis.abstractive_summary}
+                {analysis.abstractive_summary || "(not available)"}
               </li>
               <li>
                 <span className="font-medium">Suggestions:</span>{" "}

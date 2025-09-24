@@ -34,6 +34,7 @@ data/*_preprocessed*.csv
 data/*_cleaned*.csv
 data/*_normalized*.csv
 data/*_lemmatized*.csv
+data/preprocessed_all.csv
 
 # Keep original datasets (these will be tracked)
 !data/bbc-text.csv

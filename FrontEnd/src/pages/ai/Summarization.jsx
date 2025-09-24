@@ -3,12 +3,14 @@ import { summarizeText } from "../../api";
 
 export default function Summarization() {
   const [text, setText] = useState("");
-  const [summary, setSummary] = useState("");
+  const [extractive, setExtractive] = useState("");
+  const [abstractive, setAbstractive] = useState("");
 
   const handleSummarize = async () => {
     try {
-      const data = await summarizeText(text);
-      setSummary(data.summary);
+  const data = await summarizeText(text);
+  setExtractive(data.extractive || data.summary || "");
+  setAbstractive(data.abstractive || "");
     } catch (err) {
       console.error(err);
     }
@@ -35,10 +37,16 @@ export default function Summarization() {
         </button>
       </div>
 
-      {summary && (
+      {(extractive || abstractive) && (
         <div className="mt-4 bg-gray-100 p-4 rounded">
-          <h2 className="font-semibold">Summary</h2>
-          <p>{summary}</p>
+          <h2 className="font-semibold">Extractive Summary</h2>
+          <p className="mb-3">{extractive}</p>
+          {abstractive && (
+            <>
+              <h2 className="font-semibold">Abstractive Summary</h2>
+              <p>{abstractive}</p>
+            </>
+          )}
         </div>
       )}
     </div>
