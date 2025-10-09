@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useOutletContext } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 import {
   CircleX,
   FilePlusIcon,
@@ -34,6 +35,12 @@ const ALLOWED_TYPES = [
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ];
 
+const NOTICE_STYLES = {
+  success: "bg-emerald-500/20 border-emerald-400/40 text-emerald-200",
+  warning: "bg-amber-500/20 border-amber-400/40 text-amber-200",
+  info: "bg-sky-500/20 border-sky-400/40 text-sky-100",
+};
+
 const formatProbability = (value) => {
   if (typeof value === "number") return value.toFixed(2);
   const num = Number(value);
@@ -65,6 +72,10 @@ const Analysis = () => {
   const [submittedText, setSubmittedText] = useState("");
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [pdfError, setPdfError] = useState("");
+  const [includeSentiment, setIncludeSentiment] = useState(true);
+  const [saveNotice, setSaveNotice] = useState(null);
+
+  const { getAuthHeaders, isAuthenticated } = useAuth();
 
   const {
     setAnalysisData = () => {},
@@ -104,6 +115,7 @@ const Analysis = () => {
     setSelectedKeyword(null);
     setSubmittedText("");
     setPdfError("");
+    setSaveNotice(null);
   };
 
   const validateFile = (selectedFile) => {
@@ -158,6 +170,7 @@ const Analysis = () => {
     setSelectedTopicKey(null);
     setSelectedKeyword(null);
     setSubmittedText(file ? "" : trimmedText);
+    setSaveNotice(null);
 
     const scrollTimeout = setTimeout(() => {
       resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -165,19 +178,28 @@ const Analysis = () => {
 
     try {
       let response;
+      const authHeaders = getAuthHeaders();
 
       if (file) {
         const formData = new FormData();
         formData.append("file", file);
-        response = await fetch(`${API_BASE}/analyze-file`, {
+        formData.append("include_sentiment", includeSentiment ? "true" : "false");
+        const requestOptions = {
           method: "POST",
           body: formData,
-        });
+        };
+        if (Object.keys(authHeaders).length > 0) {
+          requestOptions.headers = authHeaders;
+        }
+        response = await fetch(
+          `${API_BASE}/analyze-file?include_sentiment=${includeSentiment ? "true" : "false"}`,
+          requestOptions
+        );
       } else {
         response = await fetch(`${API_BASE}/analyze`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: trimmedText }),
+          headers: { "Content-Type": "application/json", ...authHeaders },
+          body: JSON.stringify({ text: trimmedText, include_sentiment: includeSentiment }),
         });
       }
 
@@ -200,7 +222,20 @@ const Analysis = () => {
         return `topic-${index}`;
       };
 
-      setAnalysis(result);
+      const sentimentDetails = result.sentiment ?? null;
+      const hasSentimentData = Boolean(sentimentDetails && Object.keys(sentimentDetails).length > 0);
+      const normalizedSentiment = hasSentimentData ? sentimentDetails : null;
+      const normalizedResult = { ...result, sentiment: normalizedSentiment };
+
+      if (result.saved) {
+        setSaveNotice({ type: "success", message: "Analysis saved to your dashboard." });
+      } else if (isAuthenticated) {
+        setSaveNotice({ type: "warning", message: "We couldn't save this analysis automatically. Please try again." });
+      } else {
+        setSaveNotice({ type: "info", message: "Sign in to save analyses to your dashboard." });
+      }
+
+      setAnalysis(normalizedResult);
       setAnalysisData({
         extractiveSummary: result.extractive_summary ?? "",
         abstractiveSummary: result.abstractive_summary ?? "",
@@ -210,9 +245,9 @@ const Analysis = () => {
         keywordCloud: result.keyword_cloud ?? [],
         suggestions: result.suggestions ?? [],
       });
-      setSentimentData(result.sentiment ?? null);
+      setSentimentData(normalizedSentiment);
       setInsights(result.suggestions ?? []);
-      setSelectedSentimentKey(result.sentiment?.overall?.label ?? null);
+      setSelectedSentimentKey(normalizedSentiment?.overall?.label ?? null);
       const defaultTopicKey =
         computeTopicKey(result.primary_topic, 0) ??
         (Array.isArray(result.topics) ? computeTopicKey(result.topics[0], 0) : null);
@@ -249,22 +284,29 @@ const Analysis = () => {
 
     try {
       let response;
+      const authHeaders = getAuthHeaders();
       const defaultTitle =
         (analysis?.primary_topic?.label ?? analysis?.topics?.[0]?.label ?? "Insight Report").toString();
 
       if (file) {
         const formData = new FormData();
         formData.append("file", file);
-        response = await fetch(`${API_BASE}/report/pdf/file`, {
+        formData.append("include_sentiment", includeSentiment ? "true" : "false");
+        const options = {
           method: "POST",
           body: formData,
-        });
+        };
+        if (Object.keys(authHeaders).length > 0) {
+          options.headers = authHeaders;
+        }
+        response = await fetch(`${API_BASE}/report/pdf/file`, options);
       } else {
         response = await fetch(`${API_BASE}/report/pdf`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...authHeaders },
           body: JSON.stringify({
             text: submittedText,
+            include_sentiment: includeSentiment,
             metadata: {
               title: defaultTitle,
               source: {
@@ -299,7 +341,7 @@ const Analysis = () => {
   };
 
   const overallLabel =
-    analysis?.sentiment?.overall?.label ?? analysis?.sentiment?.label ?? "--";
+  analysis?.sentiment?.overall?.label ?? analysis?.sentiment?.label ?? "--";
   const overallConfidence =
     analysis?.sentiment?.overall?.confidence ?? analysis?.sentiment?.score ?? null;
   const overallProbability = analysis?.sentiment?.overall?.probability ?? null;
@@ -352,6 +394,7 @@ const Analysis = () => {
     ? analysis.keyword_cloud.map((term, idx) => ({ term, score: 1 - idx * 0.05 }))
     : [];
   const selectedTopicDetails = visualTopics.find((topic) => topic.__id === selectedTopicKey);
+const showSentimentSection = Boolean(analysis?.sentiment);
 
   return (
     <section className="relative min-h-screen bg-black bg-[url(/bg.svg)] text-white pt-24">
@@ -421,7 +464,25 @@ const Analysis = () => {
             />
           </div>
 
-          <div className="mt-6 flex flex-wrap justify-end gap-3">
+          <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
+            <div className="flex items-center gap-2 mr-auto">
+              <label htmlFor="sentiment-toggle" className="text-sm text-gray-300 font-medium">
+                <span className="mr-2">Include Sentiment Analysis</span>
+              </label>
+              <button
+                id="sentiment-toggle"
+                type="button"
+                aria-pressed={includeSentiment}
+                onClick={() => setIncludeSentiment((prev) => !prev)}
+                className={`relative w-12 h-6 rounded-full transition-colors duration-200 focus:outline-none border border-white/20 ${includeSentiment ? "bg-primary" : "bg-gray-700"}`}
+                style={{ minWidth: "48px" }}
+              >
+                <span
+                  className={`absolute left-1 top-1 w-4 h-4 rounded-full bg-white transition-transform duration-200 ${includeSentiment ? "translate-x-6" : "translate-x-0"}`}
+                  style={{ boxShadow: "0 0 6px #fff2" }}
+                />
+              </button>
+            </div>
             <button
               type="button"
               onClick={resetState}
@@ -501,6 +562,27 @@ const Analysis = () => {
 
 
         <div ref={resultRef} className="space-y-6">
+          {saveNotice && (
+            <div
+              className={`p-4 rounded-xl border ${
+                NOTICE_STYLES[saveNotice.type] ?? "bg-white/10 border-white/20 text-gray-200"
+              }`}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <span className="text-sm leading-relaxed">{saveNotice.message}</span>
+                {saveNotice.type === "success" ? (
+                  <a href="/dashboard" className="text-sm font-semibold text-white underline">
+                    View dashboard
+                  </a>
+                ) : null}
+                {saveNotice.type === "info" ? (
+                  <a href="/login" className="text-sm font-semibold text-white underline">
+                    Sign in
+                  </a>
+                ) : null}
+              </div>
+            </div>
+          )}
           {analysis && !loading && (
             <div className="flex flex-col gap-6">
               <div className="p-5 bg-white/10 backdrop-blur rounded-xl border border-white/20 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -627,7 +709,8 @@ const Analysis = () => {
                 )}
               </div>
 
-              <div className="p-5 bg-white/10 backdrop-blur rounded-xl border border-white/20 flex flex-col gap-5">
+              {showSentimentSection && (
+                <div className="p-5 bg-white/10 backdrop-blur rounded-xl border border-white/20 flex flex-col gap-5">
                 <div className="flex items-center gap-2">
                   <Sparkles className="w-5 h-5 text-primary" />
                   <h3 className="font-semibold text-primary text-lg">Sentiment Analysis</h3>
@@ -720,6 +803,7 @@ const Analysis = () => {
                   </div>
                 </div>
               </div>
+              )}
 
               {(analysis.extractive_summary || analysis.abstractive_summary) && (
                 <div className="p-5 bg-white/10 backdrop-blur rounded-xl border border-white/20">

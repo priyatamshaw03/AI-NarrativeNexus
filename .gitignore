@@ -1,4 +1,3 @@
-
 # Logs
 logs
 *.log
@@ -35,7 +34,6 @@ data/*_preprocessed*.csv
 data/*_cleaned*.csv
 data/*_normalized*.csv
 data/*_lemmatized*.csv
-data/preprocessed_all.csv
 
 # Keep original datasets (these will be tracked)
 !data/bbc-text.csv
@@ -93,3 +91,13 @@ ml/t5_summarization_model/
 data/*.zip
 data/*.tar
 data/*.tar.gz
+
+# Large binary artifacts
+models/*.pkl
+models/*.h5
+models/*.joblib
+models/*.pt
+models/*.onnx
+*.ipynb
+*.pdf
+reports/*.docx
