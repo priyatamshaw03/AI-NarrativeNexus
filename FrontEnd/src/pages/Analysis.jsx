@@ -474,7 +474,7 @@ const showSentimentSection = Boolean(analysis?.sentiment);
                 type="button"
                 aria-pressed={includeSentiment}
                 onClick={() => setIncludeSentiment((prev) => !prev)}
-                className={`relative w-12 h-6 rounded-full transition-colors duration-200 focus:outline-none border border-white/20 ${includeSentiment ? "bg-primary" : "bg-gray-700"}`}
+                className={`relative w-12 h-6 rounded-full transition-colors cursor-pointer duration-200 focus:outline-none border border-white/20 ${includeSentiment ? "bg-primary" : "bg-gray-700"}`}
                 style={{ minWidth: "48px" }}
               >
                 <span

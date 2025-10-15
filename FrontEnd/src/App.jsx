@@ -1,9 +1,9 @@
 import { Navigate, Route, Routes } from "react-router-dom"
 import Home from "./pages/Home"
 import Login from "./pages/Auth/Login"
+import Analysis from "./pages/Analysis"
 import Navbar from "./components/Navbar"
 import About from "./pages/About"
-import Analysis from "./pages/analysis"
 import Dashboard from "./pages/Dashboard"
 import { useAuth } from "./contexts/AuthContext"
 

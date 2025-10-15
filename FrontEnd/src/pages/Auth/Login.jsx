@@ -104,7 +104,7 @@ const Login = () => {
                 <button
                     type="submit"
                     disabled={submitting}
-                    className="mt-2 w-full h-12 rounded-full text-white bg-primary hover:opacity-90 transition-opacity disabled:opacity-50"
+                    className="mt-2 w-full h-12 rounded-full text-white bg-primary cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-50"
                 >
                     {submitting ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Create account'}
                 </button>
@@ -112,13 +112,13 @@ const Login = () => {
                 <p className="text-gray-300 text-sm">
                     {mode === 'login' ? (
                         <>Don’t have an account?{' '}
-                            <button type="button" onClick={toggleMode} className="text-primary underline">
+                            <button type="button" onClick={toggleMode} className="text-primary cursor-pointer underline">
                                 Sign up
                             </button>
                         </>
                     ) : (
                         <>Already registered?{' '}
-                            <button type="button" onClick={toggleMode} className="text-primary underline">
+                            <button type="button" onClick={toggleMode} className="text-primary cursor-pointer underline">
                                 Sign in
                             </button>
                         </>
